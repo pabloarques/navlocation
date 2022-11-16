@@ -38,7 +38,7 @@ public class HomeFragment extends Fragment {
         binding.buttonlocation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                getLocation();
+                startTrackingLocation();
             }
         });
 
@@ -50,9 +50,9 @@ public class HomeFragment extends Fragment {
                     Boolean coarseLocationGranted = result.getOrDefault(
                             Manifest.permission.ACCESS_COARSE_LOCATION, false);
                     if (fineLocationGranted != null && fineLocationGranted) {
-                        getLocation();
+                        startTrackingLocation();
                     } else if (coarseLocationGranted != null && coarseLocationGranted) {
-                        getLocation();
+                        startTrackingLocation();
                     } else {
                         Toast.makeText(requireContext(), "No concedeixen permisos", Toast.LENGTH_SHORT).show();
                     }
@@ -67,7 +67,7 @@ public class HomeFragment extends Fragment {
         return root;
     }
 
-        private void getLocation() {
+        private void startTrackingLocation() {
             if (ContextCompat.checkSelfPermission(getContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
