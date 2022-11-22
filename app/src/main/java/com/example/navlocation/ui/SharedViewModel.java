@@ -20,6 +20,7 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.firebase.auth.FirebaseUser;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ public class SharedViewModel extends AndroidViewModel {
     private FusedLocationProviderClient mFusedLocationClient;
     private boolean mTrackingLocation;
     private MutableLiveData<FirebaseUser> user = new MutableLiveData<>();
+    private final MutableLiveData<LatLng> currentLatLng = new MutableLiveData<>();
 
 
     public SharedViewModel(@NonNull Application application) {
@@ -45,6 +47,9 @@ public class SharedViewModel extends AndroidViewModel {
         this.app = application;
     }
 
+    public MutableLiveData<LatLng> getCurrentLatLng() {
+        return currentLatLng;
+    }
 
     public LiveData<FirebaseUser> getUser() {
         return user;
@@ -129,52 +134,14 @@ public class SharedViewModel extends AndroidViewModel {
     }
 
     private void fetchAddress(Location location) {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Handler handler = new Handler(Looper.getMainLooper());
+        try {
+            LatLng latlng = new LatLng(location.getLatitude(), location.getLongitude());
+            currentLatLng.postValue(latlng);
 
-        Geocoder geocoder = new Geocoder(app.getApplicationContext(), Locale.getDefault());
+            } catch(Exception ex){
+            ex.printStackTrace();
+        }
 
-        executor.execute(() -> {
-            // Aquest codi s'executa en segon pla
-            List<Address> addresses = null;
-            String resultMessage = "";
-
-            try {
-                addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(),
-                        // En aquest cas, sols volem una única adreça:
-                        1);
-
-
-                if (addresses == null || addresses.size() == 0) {
-                    if (resultMessage.isEmpty()) {
-                        resultMessage = "No s'ha trobat cap adreça";
-                        Log.e("INCIVISME", resultMessage);
-                    }
-                } else {
-                    Address address = addresses.get(0);
-                    ArrayList<String> addressParts = new ArrayList<>();
-
-                    for (int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
-                        addressParts.add(address.getAddressLine(i));
-                    }
-
-                    resultMessage = TextUtils.join("\n", addressParts);
-                    String finalResultMessage = resultMessage;
-                    handler.post(() -> {
-                        // Aquest codi s'executa en primer pla.
-                        if (mTrackingLocation)
-                            currentAddress.postValue(String.format("Direcció: %1$s \n Hora: %2$tr", finalResultMessage, System.currentTimeMillis()));
-                    });
-                }
-
-            } catch (IOException ioException) {
-                resultMessage = "Servei no disponible";
-                Log.e("INCIVISME", resultMessage, ioException);
-            } catch (IllegalArgumentException illegalArgumentException) {
-                resultMessage = "Coordenades no vàlides";
-                Log.e("INCIVISME", resultMessage + ". " + "Latitude = " + location.getLatitude() + ", Longitude = " + location.getLongitude(), illegalArgumentException);
-            }
-        });
     }
 
 }

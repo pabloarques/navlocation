@@ -1,45 +1,30 @@
 package com.example.navlocation.ui.home;
-
-
 import android.location.Location;
 import android.os.Bundle;
-
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
-import android.widget.TextView;
-import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import com.example.navlocation.databinding.FragmentHomeBinding;
+import com.example.navlocation.ui.Incidencia;
 import com.example.navlocation.ui.SharedViewModel;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class HomeFragment extends Fragment {
 
     private FragmentHomeBinding binding;
-    private Location mLastLocation;
-    private FusedLocationProviderClient mFusedLocationClient;
-    private ActivityResultLauncher<String[]> locationPermissionRequest;
     private boolean mTrackingLocation = false;
-    private LocationCallback mLocationCallback;
+    private FirebaseUser authUser;
+
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -52,11 +37,16 @@ public class HomeFragment extends Fragment {
         SharedViewModel sharedViewModel = new ViewModelProvider(requireActivity()).get(SharedViewModel.class);
 
         SharedViewModel.getCurrentAddress().observe(getViewLifecycleOwner(), address -> {
-            binding.localitzacio.setText(String.format(
+            binding.txtDireccio.setText(String.format(
                     "Direcció: %1$s \n Hora: %2$tr",
                     address, System.currentTimeMillis()));
         });
-        sharedViewModel.getButtonText().observe(getViewLifecycleOwner(), s -> binding.buttonlocation.setText(s));
+
+        sharedViewModel.getCurrentLatLng().observe(getViewLifecycleOwner(), latlng -> {
+            binding.txtLatitud.setText(String.valueOf(latlng.latitude));
+            binding.txtLongitud.setText(String.valueOf(latlng.longitude));
+        });
+
         sharedViewModel.getProgressBar().observe(getViewLifecycleOwner(), visible -> {
             if (visible)
                 binding.loading.setVisibility(ProgressBar.VISIBLE);
@@ -64,13 +54,32 @@ public class HomeFragment extends Fragment {
                 binding.loading.setVisibility(ProgressBar.INVISIBLE);
         });
 
-        binding.buttonlocation.setOnClickListener(view -> {
-            Log.d("DEBUG", "Clicked Get Location");
-            sharedViewModel.switchTrackingLocation();
+        sharedViewModel.switchTrackingLocation();
+
+        sharedViewModel.getUser().observe(getViewLifecycleOwner(), user -> {
+            authUser = user;
         });
 
-        final TextView textView = binding.localitzacio;
-        homeViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
+        //insertar dades
+        binding.buttonNotificar.setOnClickListener(button -> {
+            Incidencia incidencia = new Incidencia();
+            incidencia.setDireccio(binding.txtDireccio.getText().toString());
+            incidencia.setLatitud(binding.txtLatitud.getText().toString());
+            incidencia.setLongitud(binding.txtLongitud.getText().toString());
+            incidencia.setProblema(binding.txtDescripcio.getText().toString());
+
+            DatabaseReference base = FirebaseDatabase.getInstance(
+            ).getReference();
+
+            DatabaseReference users = base.child("users");
+            DatabaseReference uid = users.child(authUser.getUid());
+            DatabaseReference incidencies = uid.child("incidencies");
+
+            DatabaseReference reference = incidencies.push();
+            reference.setValue(incidencia);
+        });
+
+
         return root;
     }
 
