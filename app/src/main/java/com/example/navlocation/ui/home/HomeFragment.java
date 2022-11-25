@@ -63,10 +63,14 @@ public class HomeFragment extends Fragment {
         //insertar dades
         binding.buttonNotificar.setOnClickListener(button -> {
             Incidencia incidencia = new Incidencia();
-            incidencia.setDireccio(binding.txtDireccio.getText().toString());
+            //solucion al carregant
+            String x = binding.txtLatitud.getText().toString() + binding.txtLongitud.getText().toString();
+
+            incidencia.setDireccio(String.format("Direcció: %1$s \n Hora: %2$tr",x,System.currentTimeMillis()));
             incidencia.setLatitud(binding.txtLatitud.getText().toString());
             incidencia.setLongitud(binding.txtLongitud.getText().toString());
             incidencia.setProblema(binding.txtDescripcio.getText().toString());
+
 
             DatabaseReference base = FirebaseDatabase.getInstance(
             ).getReference();
