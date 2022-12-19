@@ -1,6 +1,7 @@
 package com.example.navlocation.ui.notifications;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
@@ -79,19 +80,6 @@ public class NotificationsFragment extends Fragment {
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState){
         super.onViewCreated(view, savedInstanceState);
-/*
-        SupportMapFragment mapFragment = (SupportMapFragment) getChildFragmentManager()
-                .findFragmentById(R.id.map);
-
-        FirebaseAuth auth = FirebaseAuth.getInstance();
-        DatabaseReference base = FirebaseDatabase.getInstance().getReference();
-
-        DatabaseReference users = base.child("users");
-        DatabaseReference uid = users.child(auth.getUid());
-        DatabaseReference incidencies = uid.child("incidencies");
-
-        SharedViewModel model = new  ViewModelProvider(getActivity()).get(SharedViewModel.class);
-*/
 
         final String BASE_URL = "http://api.citybik.es/v2/networks/";
 
@@ -158,8 +146,8 @@ public class NotificationsFragment extends Fragment {
         super.onResume();
         //this will refresh the osmdroid configuration on resuming.
         //if you make changes to the configuration, use
-        //SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        //Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this));
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        Configuration.getInstance().load(getContext(), PreferenceManager.getDefaultSharedPreferences(getContext()));
         binding.map.onResume(); //needed for compass, my location overlays, v6.0.0 and up
     }
 
@@ -168,8 +156,8 @@ public class NotificationsFragment extends Fragment {
         super.onPause();
         //this will refresh the osmdroid configuration on resuming.
         //if you make changes to the configuration, use
-        //SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        //Configuration.getInstance().save(this, prefs);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        Configuration.getInstance().save(getContext(), prefs);
         binding.map.onPause();  //needed for compass, my location overlays, v6.0.0 and up
     }
 
