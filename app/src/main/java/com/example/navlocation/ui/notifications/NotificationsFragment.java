@@ -3,7 +3,7 @@ package com.example.navlocation.ui.notifications;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
+
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -14,6 +14,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -25,9 +26,14 @@ import com.example.navlocation.databinding.FragmentNotificationsBinding;
 import com.example.navlocation.ui.API.CitibikesResult;
 import com.example.navlocation.ui.API.Station;
 import com.example.navlocation.ui.API.ValenBisiApi;
-import com.example.navlocation.ui.SharedViewModel;
-import com.google.android.gms.maps.SupportMapFragment;
+import com.example.navlocation.ui.Incidencia;
+
+import com.google.android.gms.maps.model.LatLng;
+
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -36,16 +42,15 @@ import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
-import org.osmdroid.views.overlay.ItemizedIconOverlay;
-import org.osmdroid.views.overlay.ItemizedOverlayWithFocus;
+
 import org.osmdroid.views.overlay.Marker;
-import org.osmdroid.views.overlay.OverlayItem;
+
 import org.osmdroid.views.overlay.compass.CompassOverlay;
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
-import java.time.Duration;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,21 +69,27 @@ public class NotificationsFragment extends Fragment {
     private ImageView foto;
     static final int REQUEST_TAKE_PHOTO = 1;
 
+    private final FirebaseAuth auth = FirebaseAuth.getInstance();
+    private final DatabaseReference base = FirebaseDatabase.getInstance().getReference();
+    private final DatabaseReference users = base.child("users");
+    private final DatabaseReference uid = users.child(auth.getUid());
+    private final DatabaseReference incidencies = uid.child("incidencies");
+
+
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         NotificationsViewModel notificationsViewModel =
                 new ViewModelProvider(this).get(NotificationsViewModel.class);
 
         Context ctx = requireActivity().getApplicationContext();
+        Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
 
         binding = FragmentNotificationsBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-
-
         return root;
     }
 
-    public void onViewCreated(@NonNull View view, Bundle savedInstanceState){
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         final String BASE_URL = "http://api.citybik.es/v2/networks/";
@@ -110,33 +121,40 @@ public class NotificationsFragment extends Fragment {
                 }
         );
 
-        valenBisiApi.status().enqueue(new Callback<CitibikesResult>() {
-
+        incidencies.addChildEventListener(new ChildEventListener() {
             @Override
-            public void onResponse(Call<CitibikesResult> call, Response<CitibikesResult> response) {
-                CitibikesResult result = response.body();
-                List<Station> stations = result.getNetwork().getStations();
+            public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+                    Incidencia incidencia = snapshot.getValue(Incidencia.class);
 
-                Log.e("XXXXX", stations.toString());
-                for (Station station : stations) {
-                    Marker m = new Marker(binding.map);
-                    m.setPosition(new GeoPoint(station.getLatitude(), station.getLongitude()));
-                    m.setTextLabelFontSize(40);
-                    m.setIcon(getResources().getDrawable(R.drawable.ic_notifications_black_24dp));
-                    m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_TOP);
-                    m.setTitle(station.getName());
-                    m.setSnippet(
-                            String.format("%s llocs - %s disponibles", station.getFreeBikes() + station.getEmptySlots(), station.getFreeBikes())
-                    );
-                    binding.map.getOverlays().add(m);
-                }
+                Marker m = new Marker(binding.map);
+                m.setPosition(new GeoPoint(Double.parseDouble(incidencia.getLatitud()), Double.parseDouble(incidencia.getLongitud())));
+                m.setTextLabelFontSize(40);
+                m.setIcon(getResources().getDrawable(R.drawable.ic_notifications_black_24dp));
+                m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_TOP);
+                m.setTitle(incidencia.getDireccio());
+                m.setSnippet(incidencia.getProblema());
+                binding.map.getOverlays().add(m);
 
             }
 
             @Override
-            public void onFailure(Call<CitibikesResult> call, Throwable t) {
-                Log.e("XXXXX",call.toString());
-                t.printStackTrace();
+            public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+
+            }
+
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
+
+            }
+
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
             }
         });
     }//oncreateviwed
